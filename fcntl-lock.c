@@ -54,6 +54,8 @@ static const struct option long_options[] = {
   { "timeout",      1, NULL, 'w' },
   { "wait",         1, NULL, 'w' },
   { "close",        0, NULL, 'o' },
+  { "length",       0, NULL, 'l' },
+  { "offset",       0, NULL, 'f' },
   { "help",         0, NULL, 'h' },
   { "version",      0, NULL, 'V' },
   { 0, 0, 0, 0 }
@@ -134,6 +136,8 @@ int main(int argc, char *argv[])
   int do_close = 0;
   int err;
   int status;
+  off_t offset = 0;
+  off_t length = 0;
   char *eon;
   char **cmd_argv = NULL, *sh_c_argv[4];
   struct flock lock;
@@ -148,7 +152,7 @@ int main(int argc, char *argv[])
   memset(&timeout, 0, sizeof timeout);
 
   optopt = 0;
-  while ( (opt = getopt_long(argc, argv, "+sexnouw:hV?", long_options, &ix)) != EOF ) {
+  while ( (opt = getopt_long(argc, argv, "+sexnouw:l:f:hV?", long_options, &ix)) != EOF ) {
     switch(opt) {
     case 's':
       type = F_RDLCK;
@@ -171,6 +175,12 @@ int main(int argc, char *argv[])
       eon = strtotimeval(optarg, &timeout.it_value);
       if ( *eon )
 	usage(EX_USAGE);
+      break;
+    case 'f':
+      offset = strtol(optarg, &eon, 10);
+      break;
+    case 'l':
+      length = strtol(optarg, &eon, 10);
       break;
     case 'V':
       printf("fcntl-lock (%s)\n", PACKAGE_STRING);
@@ -262,6 +272,8 @@ int main(int argc, char *argv[])
 
   memset(&lock, 0, sizeof(lock));
   lock.l_type = type;
+  lock.l_start = offset;
+  lock.l_len = length;
   while ( fcntl(fd, block, &lock) ) {
     switch( (err = errno) ) {
     case EAGAIN:		/* -n option set and failed to lock */
